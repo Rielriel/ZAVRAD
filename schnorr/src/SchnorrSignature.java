@@ -58,12 +58,10 @@ public class SchnorrSignature {
 
         //dijeli li q vrijednost (p-1)?
         // k = (p-1)/q, k*q+1 = p
-        while(true){
-            k = new BigInteger(p_len-q_len, random);
+        do {
+            k = new BigInteger(p_len - q_len, random);
             p = k.multiply(q).add(BigInteger.ONE);
-            if(p.isProbablePrime(100))
-                break;
-        }
+        } while (!p.isProbablePrime(100));
 
         /*System.out.println("q: "+q);
         System.out.println("p: "+p);
@@ -73,11 +71,9 @@ public class SchnorrSignature {
 
         //System.out.println("alpha: "+alpha);
 
-        while (true){
+        do {
             a = new BigInteger(q_len, random);
-            if(a.compareTo(BigInteger.ONE) >= 0 && (q.subtract(BigInteger.ONE)).compareTo(a) >= 0){}
-                break;
-        }
+        } while (a.compareTo(BigInteger.ONE) < 0 || (q.subtract(BigInteger.ONE)).compareTo(a) < 0);
 
         //System.out.println("a: "+a);
 
@@ -109,11 +105,9 @@ public class SchnorrSignature {
         PrivateKey privateKey = user.privateKey;
         PublicKey publicKey = user.publicKey;
         BigInteger k;
-        while (true){
+        do {
             k = new BigInteger(q_len, random);
-            if(k.compareTo(BigInteger.ONE) >= 0 && (publicKey.q.subtract(BigInteger.ONE)).compareTo(k) >= 0)
-                break;
-        }
+        } while (k.compareTo(BigInteger.ONE) < 0 || (publicKey.q.subtract(BigInteger.ONE)).compareTo(k) < 0);
 
         BigInteger r = publicKey.alpha.modPow(k,publicKey.p);
         //System.out.println("r: " + r);
@@ -126,7 +120,7 @@ public class SchnorrSignature {
     }
 
 
-    public boolean verifySignature(String message, Signature signature, PublicKey publicKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    public boolean verifySignature(String message, Signature signature, PublicKey publicKey) throws NoSuchAlgorithmException {
         //System.out.println("Verifying signature...");
         BigInteger alphaPowerS = publicKey.alpha.modPow(signature.s,publicKey.p);
         //System.out.println("alpha^s mod p: " + alphaPowerS);
@@ -147,15 +141,12 @@ public class SchnorrSignature {
         List<BigInteger> klist = new ArrayList<>();
 
         for(User user : users){
-            PrivateKey privateKey = user.privateKey;
             PublicKey publicKey = user.publicKey;
             BigInteger k;
 
-            while (true){
+            do {
                 k = new BigInteger(q_len, random);
-                if(k.compareTo(BigInteger.ONE) >= 0 && (publicKey.q.subtract(BigInteger.ONE)).compareTo(k) >= 0)
-                    break;
-            }
+            } while (k.compareTo(BigInteger.ONE) < 0 || (publicKey.q.subtract(BigInteger.ONE)).compareTo(k) < 0);
             klist.add(k);
             BigInteger r = publicKey.alpha.modPow(k,publicKey.p);
             R = R.multiply(r).mod(publicKey.p);
@@ -183,20 +174,16 @@ public class SchnorrSignature {
         BigInteger a;
         BigInteger y;
         List<User> users = new ArrayList<>();
-        while(true){
-            k = new BigInteger(p_len-q_len, random);
+        do {
+            k = new BigInteger(p_len - q_len, random);
             p = k.multiply(q).add(BigInteger.ONE);
-            if(p.isProbablePrime(100))
-                break;
-        }
+        } while (!p.isProbablePrime(100));
         for(alpha = g.modPow(p.subtract(BigInteger.ONE).divide(q), p); alpha.equals(BigInteger.ONE); alpha.equals(BigInteger.ONE)); alpha = g.modPow(p.subtract(BigInteger.ONE).divide(q), p);
 
         for(int i = 0; i < n; i++){
-            while (true){
+            do {
                 a = new BigInteger(q.bitLength(), random);
-                if(a.compareTo(BigInteger.ONE) >= 0 && (q.subtract(BigInteger.ONE)).compareTo(a) >= 0){}
-                    break;
-            }
+            } while (a.compareTo(BigInteger.ONE) < 0 || (q.subtract(BigInteger.ONE)).compareTo(a) < 0);
 
             y = alpha.modPow(a, p);
 
@@ -208,8 +195,8 @@ public class SchnorrSignature {
         return users;
 
     }
-    public boolean verifyAgregateSignature(List<User> users, Signature signature, String message) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        User user = users.get(0);
+    public boolean verifyAgregateSignature(List<User> users, Signature signature, String message) throws NoSuchAlgorithmException {
+        User user = users.getFirst();
         PublicKey publicKey = user.publicKey;
         BigInteger y = BigInteger.ONE;
         for(User u: users){
@@ -228,7 +215,7 @@ public class SchnorrSignature {
     }
 
 
-    public static void main(String[] args) throws NoSuchAlgorithmException, SignatureException, InvalidKeyException {
+    public static void main(String[] args) throws NoSuchAlgorithmException {
         StringBuilder sb = new StringBuilder();
         Scanner sc = new Scanner(System.in);
         sb.append("[1]Lenstra/Verheul(2025) Key:158 Group:2174");
@@ -261,11 +248,23 @@ public class SchnorrSignature {
         //System.out.println(user1);
         String message = "Jesi l živa, staričice moja?";
         Signature signature1 = sp.generateSignature(message, user1);
-        System.out.println(sp.verifySignature(message, signature1, user1.publicKey));
+        System.out.println("Ispravan potpis usera1: "+sp.verifySignature(message, signature1, user1.publicKey));
+
+        User user2 = sp.generateKeys();
+        String message2 = "Sin tvoj živi i pozdrav ti šalje.";
+        Signature signature2 = sp.generateSignature(message2, user2);
+        System.out.println("Ispravan potpis usera2: "+sp.verifySignature(message2, signature2, user2.publicKey));
+        System.out.println("Neispravan potpis, krivi user, kriva poruka: "+sp.verifySignature(message, signature1, user2.publicKey));
+
+        User user3 = sp.generateKeys();
+        Signature signature4 = sp.generateSignature(message, user3);
+        System.out.println("Neispravan potpis, krivi user, ista poruka: "+sp.verifySignature(message, signature4, user2.publicKey));
 
         List<User> users = sp.generateMultipleKeys(5);
-        Signature signature2 = sp.generateAgregateSignature(users, message);
-        System.out.println(sp.verifyAgregateSignature(users, signature2, message));
+        Signature signature3 = sp.generateAgregateSignature(users, message);
+        System.out.println("Agregacija potpisa: "+sp.verifyAgregateSignature(users, signature3, message));
+
+
 
     }
 }
