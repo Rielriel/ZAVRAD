@@ -215,6 +215,24 @@ public class SchnorrSignature {
     }
 
 
+    public Signature generateSignatureWithFixedNonce(String message, User user, BigInteger k)
+            throws NoSuchAlgorithmException {
+
+        PrivateKey privateKey = user.privateKey;
+        PublicKey publicKey = user.publicKey;
+
+        if (k.compareTo(BigInteger.ONE) < 0 || k.compareTo(publicKey.q.subtract(BigInteger.ONE)) > 0) {
+            throw new IllegalArgumentException("Nonce k mora biti u rasponu [1, q-1].");
+        }
+
+        BigInteger r = publicKey.alpha.modPow(k, publicKey.p);
+        BigInteger e = hash(message, r);
+        BigInteger s = privateKey.a.multiply(e).add(k).mod(publicKey.q);
+
+        return new Signature(s, e);
+    }
+
+
     public static void main(String[] args) throws NoSuchAlgorithmException {
         StringBuilder sb = new StringBuilder();
         Scanner sc = new Scanner(System.in);
@@ -264,7 +282,26 @@ public class SchnorrSignature {
         Signature signature3 = sp.generateAgregateSignature(users, message);
         System.out.println("Agregacija potpisa: "+sp.verifyAgregateSignature(users, signature3, message));
 
+        System.out.println();
 
+        User victim = sp.generateKeys();
+
+        String m1 = "Lutalica iznad mora magle";
+        String m2 = "Smisao lutanju";
+
+
+        BigInteger k = new BigInteger(victim.publicKey.q.bitLength(), new java.security.SecureRandom())
+                .mod(victim.publicKey.q.subtract(BigInteger.ONE))
+                .add(BigInteger.ONE);
+
+        Signature signature5 = sp.generateSignatureWithFixedNonce(m1, victim, k);
+        Signature signature6 = sp.generateSignatureWithFixedNonce(m2, victim, k);
+
+        PrivateKey recovered = SchnorrNonceReuse.recoverPrivateKeyFromNonceReuse(m1, signature5, m2, signature6, victim.publicKey);
+
+        System.out.println("Original a: " + victim.privateKey.a);
+        System.out.println("Recovered a: " + recovered.a);
+        System.out.println("Match?: " + victim.privateKey.a.equals(recovered.a));
 
     }
 }
